@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Job Application Tracker</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --card: #121832;
+    --ink: #e9eefb;
+    --muted: #a9b4d4;
+    --accent: #7aa2ff;
+    --success: #2ecc71;
+    --warn: #f1c40f;
+    --danger: #ff7675;
+    --radius: 12px;
+  }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 20px;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+  #search {
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--muted);
+    background: var(--card);
+    color: var(--ink);
+  }
+  #addBtn {
+    background: var(--accent);
+    color: white;
+    padding: 8px 14px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  #addBtn:hover {
+    background: #5f89ff;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--muted);
+  }
+  th {
+    background: rgba(255,255,255,0.05);
+  }
+  tr:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  .status {
+    padding: 4px 8px;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+  }
+  .status.success { background: rgba(46,204,113,0.2); color: var(--success); }
+  .status.warn { background: rgba(241,196,15,0.2); color: var(--warn); }
+  .status.applied { background: rgba(122,162,255,0.2); color: var(--accent); }
+  button.action {
+    padding: 4px 8px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    margin: 0 2px;
+  }
+  button.edit { background: var(--warn); color: black; }
+  button.delete { background: var(--danger); color: white; }
+  #modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal form {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 300px;
+  }
+  #modal input {
+    padding: 8px;
+    border-radius: var(--radius);
+    border: 1px solid var(--muted);
+    background: #1a1f3a;
+    color: var(--ink);
+  }
+  #modal button {
+    padding: 8px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+  }
+  #modal button[type="submit"] { background: var(--accent); color: white; }
+  #modal #cancel { background: var(--danger); color: white; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Job Applications — Aug 2025</h1>
+    <input type="search" id="search" placeholder="Search...">
+    <button id="addBtn">+ Add Application</button>
+  </header>
+  <table id="tracker">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Location</th>
+        <th>Company</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Result</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+<div id="modal" style="display:none">
+  <form id="form">
+    <label>Date: <input type="date" name="date" required></label>
+    <label>Location: <input type="text" name="location" required></label>
+    <label>Company: <input type="text" name="company" required></label>
+    <label>Role: <input type="text" name="role" required></label>
+    <label>Status: <input type="text" name="status" required></label>
+    <label>Result: <input type="text" name="result"></label>
+    <button type="submit">Save</button>
+    <button type="button" id="cancel">Cancel</button>
+  </form>
+</div>
+<script>
+  let applications = JSON.parse(localStorage.getItem('applications')) || [
+    {date:'2025-08-12',location:'Remote',company:'Medicom (Codegnan)',role:'Software Developer Java',status:'success: Screening 118/120',result:''},
+    {date:'2025-08-12',location:'Gurgram',company:'Cvent',role:'Management Trainee / Associate Product Consultant',status:'success: GD Done',result:''},
+    {date:'2025-08-11',location:'Nagpur',company:'Kratin LLC',role:'Trainee Engineer',status:'warn: Submitted Resume',result:'------'},
+    {date:'2025-08-11',location:'Gurugram',company:'PWC',role:'Full Stack Developer GenAI & Analytics Advisor',status:'applied: No Update',result:'------'},
+    {date:'2025-08-11',location:'Unknown',company:'FirstSource',role:'Non IT',status:'applied: No Update',result:'------'},
+    {date:'2025-08-12',location:'Unknown',company:'BadalSoft',role:'Python & AI',status:'success: Screening Completed (124/128)',result:'---------'},
+    {date:'2025-08-13',location:'Hyderabad',company:'Cognizant',role:'Data Engineer (Java)',status:'warn: Applied',result:'---------'},
+    {date:'2025-08-13',location:'Hyderabad',company:'Infor',role:'Software Engineer',status:'warn: Applied',result:'-----'},
+    {date:'2025-08-13',location:'India',company:'LG Soft India',role:'AI & ML Engineer',status:'success: Screening Completed (126/130)',result:'------'}
+  ];
+
+  const tbody = document.querySelector('#tracker tbody');
+  const searchInput = document.querySelector('#search');
+  const modal = document.querySelector('#modal');
+  const form = document.querySelector('#form');
+  const addBtn = document.querySelector('#addBtn');
+  const cancelBtn = document.querySelector('#cancel');
+  let editIndex = null;
+  function renderTable(data) {
+    tbody.innerHTML = '';
+    data.forEach((app, index) => {
+      const [statusClass, statusText] = app.status.includes(':') ? app.status.split(':') : ['applied', app.status];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${app.date}</td>
+        <td>${app.location}</td>
+        <td>${app.company}</td>
+        <td>${app.role}</td>
+        <td><span class="status ${statusClass.trim()}">${statusText.trim()}</span></td>
+        <td>${app.result}</td>
+        <td><button class="action edit" onclick="editApp(${index})">Edit</button><button class="action delete" onclick="deleteApp(${index})">Delete</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  function saveData() {
+    localStorage.setItem('applications', JSON.stringify(applications));
+  }
+  function editApp(index) {
+    editIndex = index;
+    const app = applications[index];
+    Object.keys(app).forEach(key => form[key].value = app[key]);
+    modal.style.display = 'flex';
+  }
+  function deleteApp(index) {
+    if(confirm('Delete this application?')) {
+      applications.splice(index,1);
+      saveData();
+      renderTable(applications);
+    }
+  }
+  addBtn.onclick = () => {
+    editIndex = null;
+    form.reset();
+    modal.style.display = 'flex';
+  };
+  cancelBtn.onclick = () => modal.style.display = 'none';
+  form.onsubmit = e => {
+    e.preventDefault();
+    const newApp = Object.fromEntries(new FormData(form).entries());
+    if(editIndex !== null) {
+      applications[editIndex] = newApp;
+    } else {
+      applications.push(newApp);
+    }
+    saveData();
+    renderTable(applications);
+    modal.style.display = 'none';
+  };
+  searchInput.oninput = () => {
+    const q = searchInput.value.toLowerCase();
+    renderTable(applications.filter(app => Object.values(app).join(' ').toLowerCase().includes(q)));
+  };
+  renderTable(applications);
+</script>
+</body>
+</html>
